@@ -1,0 +1,41 @@
+{
+  "name": "vue3-myproject",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "cross-env ENV_TYPE=dev webpack-dev-server",
+    "build": "cross-env ENV_TYPE=pro webpack",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "css-loader": "^6.10.0",
+    "html-webpack-plugin": "^5.6.0",
+    "js-yaml": "^4.1.0",
+    "less": "^4.2.0",
+    "less-loader": "^12.2.0",
+    "mongoose": "^8.3.0",
+    "style-loader": "^3.3.4",
+    "vue-loader": "^17.4.2",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.0.4"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "element-plus": "^2.6.3",
+    "js-cookie": "^3.0.5",
+    "koa": "^2.15.2",
+    "koa-body": "^6.0.1",
+    "koa-router": "^12.0.1",
+    "koa-static": "^5.0.0",
+    "md5": "^2.3.0",
+    "mitt": "^3.0.1",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0"
+  }
+}
