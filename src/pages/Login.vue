@@ -23,13 +23,17 @@ import { ref, reactive} from 'vue'
 import { useRouter } from 'vue-router';
 import emitter from '@/mitt/mitt'
 import Cookies from 'js-cookie';
+import { useWebSocketStore} from '@/store/websocket'
+import {initWs} from "@/tools/initWs"
 
+let store = useWebSocketStore()
 let router = useRouter()
 let ruleForm = reactive({
     username: '',
     password: ''
 })
 let formIns = ref()
+let userInfo = reactive({})
 
 let rules = reactive({username:[{required: true,message: '请输入用户名', trigger: 'blur'}],password:[{ required: true,message:'请输入密码', trigger: 'blur' }]})
 function onSubmit(formEl){
@@ -41,7 +45,12 @@ function onSubmit(formEl){
             fetch('/api/login',{method: 'POST',body: JSON.stringify(ruleForm),headers: { 'Content-Type': 'application/json' }}).then(res=>res.json()).then(res=>{
               if(res.username){
                 ElMessage.success('登录成功')
+                store.ws = initWs(res.user_id)
+                setTimeout(()=>{
+                  emitter.emit('ws_init')
+                },0)
                 localStorage.setItem('expires',Math.floor(Date.now()/1000)+10000000)
+                localStorage.setItem('user_id',res.user_id)
                 emitter.emit('login',{status:1,name:res.username,avatar_:res.avatar,signature_:res.signature,sex_:res.sex})
                 router.push({name:'main'})
               }else{

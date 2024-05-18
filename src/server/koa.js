@@ -3,6 +3,7 @@ let app = new Koa();
 const {router} = require('./api')
 const body = require('koa-body');
 const static = require('koa-static')
+const wsSetting = require('./ws')
 
 app.use(body.koaBody({multipart: true,
     formLimit: "10mb",

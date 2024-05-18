@@ -3,7 +3,6 @@ const router = new KoaRouter()
 const mongoose = require('mongoose')
 const db_url = require('./database')
 const md5 = require('md5')
-const { resolve } = require('../../webpack.config')
 const fs = require('node:fs')
 const path = require('node:path')
 
@@ -28,7 +27,9 @@ let userShema = new mongoose.Schema({
     sex: String,
     email: String,
     avatar: String,
-    signature: String
+    signature: String,
+    isLogin:Number,
+    friends_id: [String]
 })
 
 const User = mongoose.model("user", userShema)
@@ -36,14 +37,12 @@ const User = mongoose.model("user", userShema)
 
 router.post('/api/searchFriends', (ctx, next) => {
     let requestBody = JSON.parse(ctx.request.body)
-    console.log('查询参数',requestBody)
     return new Promise((resolve, reject) => {
           User.find({$or:[{username:requestBody.searchContent},{user_id:requestBody.searchContent}] }).then(result => {
                resolve(result)
           })
        
       }).then(friends => {
-        console.log(friends)
           if(friends.length>0){
               ctx.res.statusCode = 200;
                 ctx.res.setHeader('Content-Type', 'application/json');
@@ -56,6 +55,70 @@ router.post('/api/searchFriends', (ctx, next) => {
             ctx.res.end();
           }
       })
+})
+
+router.post('/api/addFriend', (ctx, next) => {
+    let requestBody = JSON.parse(ctx.request.body)
+    return new Promise((resolve, reject) => {
+        User.find({ user_id: requestBody.user_id }).then(result => {
+            if(result[0].friends_id.indexOf(requestBody.friend_id) == -1){
+                let p1 = new Promise((_resolve, _reject) => {
+                    User.findOneAndUpdate({ user_id: requestBody.user_id },{$push:{friends_id:requestBody.friend_id}}).then(result => {
+                        _resolve(result)
+                    })
+                  })
+                  let p2 = new Promise((_resolve, reject) => {
+                      User.findOneAndUpdate({ user_id: requestBody.friend_id },{$push:{friends_id:requestBody.user_id}}).then(result => {
+                          _resolve(result)
+                      })
+                  })
+                Promise.all([p1,p2]).then(result => {
+                    resolve(result)
+                  })
+            }else{
+                reject(result)
+            }
+        })
+    }).then(result => {
+        ctx.res.statusCode = 200;
+        ctx.res.setHeader('Content-Type', 'application/json');
+        ctx.res.write(JSON.stringify(
+            {status:1}
+        ));
+        ctx.res.end();
+    }).catch(err => {
+        ctx.res.statusCode = 200;
+        ctx.res.setHeader('Content-Type', 'application/json');
+        ctx.res.write(JSON.stringify(
+            {status:0}
+        ));
+        ctx.res.end();
+    })
+})
+
+router.post('/api/getFriends', (ctx, next) => {
+    let requestBody = JSON.parse(ctx.request.body)
+    return new Promise((resolve, reject) => {
+        User.find({ user_id: requestBody.user_id }).then(result => {
+            if(result instanceof Array){
+                result = [...result]
+            }else{
+                result = [result]
+            }
+            if(result?.[0]?.friends_id?.length>0){
+                User.find({$or:[{user_id:{$in:result[0].friends_id}}]}).then(result => {
+                    resolve(result)
+                })
+            }else{
+                resolve([])
+            }
+        })
+    }).then(result => {
+        ctx.res.statusCode = 200;
+        ctx.res.setHeader('Content-Type', 'application/json');
+        ctx.res.write(JSON.stringify(result));
+        ctx.res.end();
+    })
 })
 
 router.get('/(.*).png', (ctx, next) => {
@@ -72,7 +135,9 @@ router.post('/api/registry', (ctx, next) => {
         sex: ctx.request.body.sex,
         email: ctx.request.body.email,
         avatar: ctx.request.body.avatar,
-        signature: '萌新驾到！'
+        signature: '萌新驾到！',
+        friends_id: []
+        
     });
     user.save().then(() => {
         console.log('执行成功！')
@@ -83,6 +148,22 @@ router.post('/api/registry', (ctx, next) => {
     ctx.res.end();
 })
 
+router.post('/api/resetUserState', (ctx, next) => {
+    return new Promise((resolve, reject) => {
+        let requestBody = JSON.parse(ctx.request.body)
+        console.log('用户状态重置',requestBody)
+        User.findOneAndUpdate({ user_id: requestBody.user_id },{$set:{isLogin:0}}).then(result => {
+            resolve(result)
+        })
+    }).then(result => {
+        console.log('用户状态重置数据',result)
+        ctx.res.statusCode = 200;   
+        ctx.res.setHeader('Content-Type', 'application/json');
+        ctx.res.write(JSON.stringify({status:1}));
+        ctx.res.end();
+    })
+    
+})
 router.post('/api/checkuser', (ctx, next) => {
     return new Promise((resolve, reject) => {
         User.find({ email: ctx.request.body.email }).then(result => {
@@ -99,30 +180,48 @@ router.post('/api/checkuser', (ctx, next) => {
 
 router.post('/api/login', (ctx, next) => {
     return new Promise((resolve, reject) => {
-        User.find({ username: ctx.request.body.username, password: md5(ctx.request.body.password) }).then(result => {
+        User.findOneAndUpdate({username: ctx.request.body.username, password: md5(ctx.request.body.password) },{$set:{isLogin:1}}).then(result => {
             resolve(result)
         })
     }).then(result => {
-        if (result.length == 0) {
+        console.log('用户登录',result)
+        if (!result) {
             ctx.res.statusCode = 200;
             ctx.res.setHeader('Content-Type', 'application/json');
             ctx.res.write(JSON.stringify({ name: 'error' }));
         } else {
-            console.log(result)
             ctx.res.statusCode = 302;
             ctx.res.setHeader('Content-Type', 'application/json');
-            ctx.cookies.set('isLogin', '1', { maxAge: 10000000 ,httpOnly: false});
-            ctx.cookies.set('sex', result[0].sex,{ maxAge: 10000000,httpOnly: false});
-            ctx.cookies.set('name',   Buffer.from(result[0].username,'utf-8').toString('base64'), { maxAge: 10000000,httpOnly:false});
-            ctx.cookies.set('user_id', result[0].user_id, { maxAge: 10000000,httpOnly:false});
-            ctx.cookies.set('avatar', result[0].avatar, { maxAge: 10000000,httpOnly:false});
-            ctx.cookies.set('signature', Buffer.from(result[0].signature,'utf-8').toString('base64'), { maxAge: 10000000,httpOnly:false});
-            ctx.res.write(JSON.stringify(result[0]));
+            ctx.cookies.set('isLogin', '1', { maxAge: 8000000 ,httpOnly: false});
+            ctx.cookies.set('sex', result.sex,{ maxAge: 8000000,httpOnly: false});
+            ctx.cookies.set('name',   Buffer.from(result.username,'utf-8').toString('base64'), { maxAge: 8000000,httpOnly:false});
+            ctx.cookies.set('user_id', result.user_id, { maxAge: 8000000,httpOnly:false});
+            ctx.cookies.set('avatar', result.avatar, { maxAge: 8000000,httpOnly:false});
+            ctx.cookies.set('signature', Buffer.from(result.signature,'utf-8').toString('base64'), { maxAge: 8000000,httpOnly:false});
+            ctx.res.write(JSON.stringify(result));
+
         }
         ctx.res.end();
     })
 })
 
+
+router.post('/api/logout', (ctx, next) => {
+    let requestBody = JSON.parse(ctx.request.body)
+    console.log('用户扽出',requestBody)
+    return new Promise((resolve, reject) => {
+        User.findOneAndUpdate({ user_id:requestBody.user_id },{$set:{isLogin:0}}).then(result => {
+            resolve(result)
+        })
+    }).then(result => {
+        ctx.res.statusCode = 200;
+        ctx.res.setHeader('Content-Type', 'application/json');
+        ctx.res.write(JSON.stringify(
+            {message:'退出成功！'}
+        ));
+        ctx.res.end();
+    })
+})
 
 router.post('/api/updateUserInfo', (ctx, next) => {
     let bodyObj = JSON.parse(ctx.request.body) 

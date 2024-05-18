@@ -22,7 +22,7 @@
                         <FriendBox v-for="(item, index) in currentFriends" :avatarUrl="item.avatar" :key="item.user_id"
                             :username="item.username"  :sex="item.sex" class="friendBox">
                             <template #middle><span class="text-style">{{ item.signature }}</span></template>
-                            <template #tail> <el-button type="primary" roundsize="small" style="position: absolute;right: 50px;top:0;bottom: 0;margin-top: auto;margin-bottom:auto;height: 25px;">添加</el-button  ></template>
+                            <template #tail> <el-button type="primary" roundsize="small" style="position: absolute;right: 50px;top:0;bottom: 0;margin-top: auto;margin-bottom:auto;height: 25px;" @click="addFriend(item.user_id)">添加</el-button  ></template>
                         </FriendBox>
                     </template>
                 </div>
@@ -39,24 +39,47 @@ import addFriends from '~/images/add-friends.png'
 import FuncBox from '@/components/FuncBox.vue'
 import FriendBox from '@/components/FriendBox.vue'
 import { Search } from '@element-plus/icons-vue'
+import Cookies from 'js-cookie'
+import { ElMessage } from 'element-plus'
 
 let showFriendSearch = ref(false);
 let currentFriends = reactive([])
 let searchContent = ref('')
 
 function searchFriends() {
-    fetch('/api/searchFriends', { method: 'POST', body: JSON.stringify({ searchContent: searchContent.value }) }).then(res => res.json()).then(data => {
+    fetch('/api/searchFriends', { method: 'POST', body: JSON.stringify({ searchContent: searchContent.value,user_id:Cookies.get("user_id")}) }).then(res => res.json()).then(data => {
         console.log('get data', data)
         currentFriends.length = 0
         currentFriends.push(...data)
     })
 }
 
-function addFriend() {
-}
 function creatRooms() {
     fetch('http://localhost:5027/api', { method: 'POST' }).then(res => res.json()).then(data => {
         console.log('get data', data)
+    })
+}
+
+function addFriend(id) {
+    if(id == Cookies.get("user_id")){
+        ElMessage({
+        type:'error',
+        message:'不能添加自己'
+       })
+       return
+    }
+    fetch('/api/addFriend', { method: 'POST', body: JSON.stringify({user_id:Cookies.get("user_id"),friend_id: id})}).then(res => res.json()).then(data => {
+      if(data.status == 1){
+       ElMessage({
+        type:'success',
+        message:'添加成功'
+       })
+      }else{
+       ElMessage({
+        type:'error',
+        message:'你已添加该好友'
+       })
+      }
     })
 }
 </script>

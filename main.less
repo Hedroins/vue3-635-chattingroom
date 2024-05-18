@@ -6,3 +6,113 @@ html,body {
 #app{
     height: 100%;
 }
+.loading-dot{
+    display: inline-block;
+    width: 3em;
+    height: 1em;
+    overflow:hidden;
+}
+.loading-dot::after{
+    display: inline-block;
+    font-size: 16px;
+    line-height: 1em;
+   width:3em;
+   content: '...\A..\A.';
+//    height: 1em;
+   white-space: pre-wrap;
+    overflow: hidden;
+   animation: dot 2s  infinite  step-start both;
+}
+
+@keyframes dot {
+    33% {
+        transform: translateY(-2em);
+    }
+    66% {
+        transform: translateY(-1em);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.redio-avatar {
+	box-sizing: border-box;
+	position: relative;
+}
+.redio-avatar:before {
+	content: "";
+	animation: ripple 2s ease-out infinite;
+	border: 1px solid #6d6a6a;
+	border-radius: 50%;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	box-sizing: border-box;
+	position: absolute;
+	opacity: 0;	
+}
+.redio-avatar:after {
+	content: "";
+	animation: ripple 2s 1s ease-out infinite;
+	border: 1px solid #6d6a6a;
+	border-radius: 50%;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	box-sizing: border-box;
+	position: absolute;
+	opacity: 0;	
+}
+@keyframes ripple {
+	 0% {
+		transform: scale(1.1);
+		opacity: 0.4;
+	}
+	25% {
+		transform: scale(1.2);
+		opacity: 0.3;
+	}
+	50% {
+		transform: scale(1.3);
+		opacity: 0.2;
+	}
+	75% {
+		transform: scale(1.4);
+		opacity: 0.1;
+	}
+	100% {
+		transform: scale(1.5);
+		opacity: 0;
+	}
+}
+
+.audio-border{
+    background: #86c7ff; 
+    width: 100%; 
+    font-size: 18px; 
+    color: #5f84a8; 
+    border: 1px #d7edff solid; 
+    border-radius: 5px; 
+    margin: 0px 0px 7px 0px;
+    box-shadow:5px 5px 10px gray;
+    background: -webkit-linear-gradient(left,#d7edff, #a7d6ff); /* Safari 5.1 - 6.0 */
+    background: -o-linear-gradient(right,#d7edff, #a7d6ff); /* Opera 11.1 - 12.0 */
+    background: -moz-linear-gradient(right,#d7edff, #a7d6ff); /* Firefox 3.6 - 15 */
+    background: linear-gradient(to right,#d7edff, #a7d6ff); /* 标准的语法（必须放在最后） */}
+    
+    .class2{
+    background: #fdd4b5; 
+    width: 100%; 
+    font-size: 18px; 
+    color: #5f84a8; 
+    border: 1px #e7daca solid; 
+    border-radius: 5px;
+    margin: 0px 0px 7px 0px; 
+    box-shadow:5px 5px 10px gray;
+    background: -webkit-linear-gradient(left, #e7daca, #ffc987); /* Safari 5.1 - 6.0 */
+    background: -o-linear-gradient(right, #e7daca, #ffc987); /* Opera 11.1 - 12.0 */
+    background: -moz-linear-gradient(right, #e7daca, #ffc987); /* Firefox 3.6 - 15 */
+    background: linear-gradient(to right, #e7daca, #ffc987); /* 标准的语法（必须放在最后） */} 

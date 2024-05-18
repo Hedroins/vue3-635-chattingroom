@@ -1,7 +1,15 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { VueLoaderPlugin } = require("vue-loader");
+const  MiniCssExtractPlugin  = require("mini-css-extract-plugin");
 const webpack = require("webpack");
+const webpackMkcert = require('webpack-mkcert')
+const fs = require('fs')
+
+const https = (async ()=>await webpackMkcert.default({
+    source: 'coding',
+    hosts: ['jydeng.dev', '127.0.0.1']
+  }))()
 
 let config = {
     mode: process.env.ENV_TYPE==='dev'?'development':'production',
@@ -23,7 +31,11 @@ let config = {
             template: './index.html'
         }),
         new VueLoaderPlugin(),
-        new webpack.HotModuleReplacementPlugin()
+        new webpack.HotModuleReplacementPlugin(),
+        new MiniCssExtractPlugin({
+            filename: '[name].css',
+            linkType: 'text/css'
+        })
     ],
     module: {
         rules: [
@@ -33,11 +45,11 @@ let config = {
             },
             {
                 test: /\.css$/,
-                use: ['style-loader', 'css-loader']
+                use: [MiniCssExtractPlugin.loader,'css-loader']
             },
             {
                 test: /\.less$/,
-                use: ['style-loader', 'css-loader', 'less-loader']
+                use: [MiniCssExtractPlugin.loader,'css-loader', 'less-loader']
             },
             {
                 test:/\.(png|jpe?g|gif|webp|svg)/,
@@ -45,16 +57,35 @@ let config = {
             }
         ]
     },
+    performance: {
+        hints: 'error', 
+        maxAssetSize: 9000000, // 整数类型（以字节为单位）
+        maxEntrypointSize: 9000000 // 整数类型（以字节为单位）
+      },
     devServer: {
         static: {
-            publicPath: path.resolve(__dirname, './')
+            publicPath: path.resolve(__dirname, './'),
         },
-        host: 'localhost',
         open: true,
         hot: true,
-        port: '5027',
+        https:{
+            host: '0.0.0.0',
+            port: 443,
+            key: fs.readFileSync(path.resolve(__dirname, "./ca/dev.key")),
+            cert: fs.readFileSync(path.resolve(__dirname, "./ca/dev.pem")),
+        },
+      
         proxy:[{
-                context:['/api','/api/registry','/api/checkuser','/api/login','/api/updateUserInfo','/api/searchFriends'],
+                context:['/api',
+                '/api/registry',
+                '/api/checkuser',
+                '/api/login',
+                '/api/updateUserInfo',
+                '/api/searchFriends',
+                'api/addFriend',
+                '/api/getFriends',
+                '/api/logout',
+                '/api/resetUserState'],
                 target: 'http://localhost:5028',
                 changeOrigin: true,
                 onProxyReq:function (proxyReq, req, res, options) {

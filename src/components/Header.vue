@@ -17,7 +17,8 @@
             </div>
 
         </div>
-        <el-dialog v-model="showPersonalInfo" title="个人中心" width="500" center class="personal-info-dialog" @opened="personalInfoDialogOpened">
+        <el-dialog v-model="showPersonalInfo" title="个人中心" width="500" center class="personal-info-dialog"
+            @opened="personalInfoDialogOpened">
             <template #header>
                 <span>个人信息</span>
             </template>
@@ -42,7 +43,7 @@
                 </el-divider>
                 <div class="right-content">
                     <label>用户名:</label>
-                    <el-input v-model="_username" style="width: 240px" placeholder="请输入用户名" @input="usernameChange"/>
+                    <el-input v-model="_username" style="width: 240px" placeholder="请输入用户名" @input="usernameChange" />
                     <label>性别:</label>
                     <el-radio-group v-model="_sex" class="ml-4" style="width: 240px">
                         <el-radio value="1">男</el-radio>
@@ -51,10 +52,7 @@
                     <label>个性签名:</label>
                     <el-input v-model="_signature" type="textarea" style="width: 240px;height:120px"
                         placeholder="请输入个性签名" :autosize="{ minRows: 5, maxRows: 5 }" />
-
                 </div>
-
-
             </div>
 
             <!-- <template #footer>
@@ -66,51 +64,177 @@
                 </div>
             </template> -->
         </el-dialog>
+        <teleport to="body">
+            <CallIn :userInfo="userInfo" ref="call_in"></CallIn>
+        </teleport>
+
+        <teleport to="body">
+            <VedioView ref="videoViewRef" :toUser="video_user_id"></VedioView>
+        </teleport>
+        <teleport to="body">
+            <AudioView ref="audioViewRef" :toUser="audio_user_id"></AudioView>
+        </teleport>
     </div>
 </template>
 <script setup>
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import emitter from '@/mitt/mitt'
 import Cookies from 'js-cookie'
-import { ref,onMounted} from 'vue'
-import { StarFilled } from '@element-plus/icons-vue'
+import { ref, onMounted, reactive, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
+import { base64ToStr } from '@/tools/tool'
+import { useWebSocketStore } from '@/store/websocket'
+import { initWs } from '@/tools/initWs'
+import CallIn from '@/components/Call_In.vue'
+import VedioView from '@/components/VedioView.vue'
+import {ElNotification} from 'element-plus'
+import AudioView from '@/components/AudioView.vue'
+
+
+let store = useWebSocketStore()
 let router = useRouter()
-let username = Cookies.get('name')?ref(base64ToStr(Cookies.get('name'))):ref('')
+let username = Cookies.get('name') ? ref(base64ToStr(Cookies.get('name'))) : ref('')
 let _username = ref(username.value)
-let isLogin = Cookies.get('isLogin')?ref(Cookies.get('isLogin')):ref(0)
-let avatarUrl = Cookies.get('avatar')?ref(Cookies.get('avatar')):ref('')
+let isLogin = Cookies.get('isLogin') ? ref(Cookies.get('isLogin')) : ref(0)
+let avatarUrl = Cookies.get('avatar') ? ref(Cookies.get('avatar')) : ref('')
 let avatar = ref(avatarUrl.value);
-let signature =Cookies.get('signature')?ref(base64ToStr(Cookies.get('signature'))) : ref('')
+let signature = Cookies.get('signature') ? ref(base64ToStr(Cookies.get('signature'))) : ref('')
 let _signature = ref(signature.value)
-let sex = Cookies.get('sex')?ref(Cookies.get('sex')):ref('1')
+let sex = Cookies.get('sex') ? ref(Cookies.get('sex')) : ref('1')
 let _sex = ref(sex.value)
 let showPersonalInfo = ref(false)
+let userInfo = reactive({})
+let call_in = ref();
+let video_user_id = ref('')
+let audio_user_id = ref('')
+let videoViewRef = ref();
+let audioViewRef =ref();
+let offerData;
+let answerData;
+let iceData;
 
-function usernameChange(){
-    console.log(_username.value,'用户名')
-}
-function base64ToStr(base64) {
-    let base64str = atob(base64)
-    let buffer = new ArrayBuffer(base64str.length);
-    const view = new Uint8Array(buffer)
-
-    for (let i = 0; i < base64str.length; i++) {
-        view[i] = base64str[i].charCodeAt()
+emitter.on('click_accept', ({ data, isCallSide }) => {
+    if(data.callType === 'video'){
+        videoViewRef.value.show = true;
+        nextTick(() => {
+        emitter.emit('video_ready', { data, isCallSide })
+    })
     }
-    let uintArray = new Uint8Array(view)
-    const decoder = new TextDecoder()
-    const result = decoder.decode(uintArray)
-    return result
+    if(data.callType === 'audio'){
+        audioViewRef.value.show = true;
+        nextTick(() => {
+        emitter.emit('audio_ready', { data, isCallSide })
+    })
+    }
+    
+})
+
+emitter.on('call_accept', (data) => {
+   
+    if(data.callType==='video'){
+        videoViewRef.value.show = true;
+        nextTick(() => {
+        emitter.emit('video_ready', { data })
+    })
+    }else if(data.callType ==="audio"){
+        audioViewRef.value.show = true;
+        nextTick(() => {
+        emitter.emit('audio_ready', { data })
+    })
+    }
+   
+})
+
+
+emitter.on('video_peer_created', () => {
+    console.log('dom创建完成')
+    console.log('offerData',offerData)
+    console.log('answerData',answerData)
+    console.log('iceData',iceData)
+    
+    if (offerData) {
+        emitter.emit('video_offer_created', offerData)
+    }
+    if (answerData) {
+        emitter.emit('video_answer_created', answerData)
+    }
+})
+
+emitter.on('audio_peer_created', () => {  
+    if (offerData) {
+        emitter.emit('audio_offer_created', offerData)
+    }
+    if (answerData) {
+        emitter.emit('audio_answer_created', answerData)
+    }
+})
+
+
+emitter.on('1V1OFFER', (data) => {
+    offerData = data
+   if(data.callType === 'video'){
+    if (document.getElementById('localVideo')&& videoViewRef.value.peerStatus === 1) {
+        emitter.emit('video_offer_created', offerData)
+    }
+   }
+   if(data.callType === 'audio'){
+    if (document.getElementById('localAudio')&& audioViewRef.value.peerStatus === 1) {
+        emitter.emit('audio_offer_created', offerData)
+    }
+   }
+  
+})
+
+emitter.on('1V1ANSWER', data => {
+    answerData = data
+    if(data.callType === 'video'){
+    if (document.getElementById('localVideo')&& videoViewRef.value.peerStatus === 1) {
+        emitter.emit('video_answer_created', answerData)
+    }
+}
+    if(data.callType === 'audio'){
+    if (document.getElementById('localAudio')&& audioViewRef.value.peerStatus === 1) {
+        emitter.emit('audio_answer_created', answerData)
+    }
 }
 
-function personalInfoDialogOpened(){
+})
+
+emitter.on('audio_peer_closed',()=>{
+    offerData = null;
+        answerData =null;
+        iceData =null;
+})
+
+emitter.on('1V1ICE', data => {
+    iceData = data
+   if(data.callType === 'video'){
+    if (document.getElementById('localVideo')&&videoViewRef.value.peerStatus === 1) {
+        emitter.emit('video_ice_created', iceData)
+    }
+   }
+   if(data.callType === 'audio'){
+    if (document.getElementById('localAudio')&& audioViewRef.value.peerStatus === 1) {
+        emitter.emit('audio_ice_created', iceData)
+    }
+   }
+
+})
+
+
+emitter.on('video_user_id', (id) => { video_user_id.value = id })
+emitter.on('audio_user_id', (id)=>{audio_user_id.value = id})
+function usernameChange() {
+    console.log(_username.value, '用户名')
+}
+
+function personalInfoDialogOpened() {
     let clossBtn = document.querySelector('.personal-info-dialog  .el-dialog__headerbtn')
-    clossBtn.addEventListener('click',dislogClose)
+    clossBtn.addEventListener('click', dislogClose)
 }
 
 
-function dislogClose(){
+function dislogClose() {
     _username.value = username.value;
     _signature.value = signature.value;
     _sex.value = sex.value;
@@ -120,35 +244,35 @@ function dislogClose(){
 
 function savePersonalInfoChange() {
     if (_sex.value !== sex.value || _signature.value !== signature.value || username.value != _username.value || avatar.value.length !== avatarUrl.value.length) {
-        let paramData = {user_id:Cookies.get('user_id'),expires:localStorage.getItem('expires')}
+        let paramData = { user_id: Cookies.get('user_id'), expires: localStorage.getItem('expires') }
 
-        if(_username.value!==username.value){
-            paramData.username=_username.value
+        if (_username.value !== username.value) {
+            paramData.username = _username.value
         }
-        if(_sex.value!==sex.value){
-            paramData.sex=_sex.value
+        if (_sex.value !== sex.value) {
+            paramData.sex = _sex.value
         }
-        if(_signature.value!==signature.value){
-            paramData.signature=_signature.value
+        if (_signature.value !== signature.value) {
+            paramData.signature = _signature.value
         }
-        if(avatar.value!==avatarUrl.value){
-            paramData.avatar=avatar.value
+        if (avatar.value !== avatarUrl.value) {
+            paramData.avatar = avatar.value
         }
-        console.log('参数对象',paramData)
-    
-        fetch('/api/updateUserInfo', {method: 'POST', body: JSON.stringify(paramData)}).then(res=>res.json()).then(res=>{
+        console.log('参数对象', paramData)
+
+        fetch('/api/updateUserInfo', { method: 'POST', body: JSON.stringify(paramData) }).then(res => res.json()).then(res => {
             let userObj = res
-            if(userObj.username){
-                emitter.emit('login',{status:Cookies.get('isLogin'),name:userObj.username,avatar_:userObj.avatar,signature_:userObj.signature,sex_:userObj.sex})
-                showPersonalInfo.value=false;
+            if (userObj.username) {
+                emitter.emit('login', { status: Cookies.get('isLogin'), name: userObj.username, avatar_: userObj.avatar, signature_: userObj.signature, sex_: userObj.sex })
+                showPersonalInfo.value = false;
                 ElMessage({
-                message: '修改成功',
-                type: 'success'
-            })
+                    message: '修改成功',
+                    type: 'success'
+                })
             }
-          
+
         })
-    }else{
+    } else {
         ElMessage({
             message: '未修改任何信息',
             type: 'warning'
@@ -157,14 +281,29 @@ function savePersonalInfoChange() {
 }
 
 function userLogout() {
-    console.log(router,'router')
-    showPersonalInfo.value=false
+    console.log(store.ws, 'ws_inst')
+    store.ws.send(JSON.stringify({
+        type: 'logout',
+        fromUserId: Cookies.get('user_id'),
+    }))
+    fetch('/api/logout', { method: 'POST', body: JSON.stringify({ user_id: Cookies.get('user_id') }) }).then(res => res.json()).then(res => {
+        console.log(res, '退出登录')
+        if (res.message === '退出成功') {
+            store?.ws?.close?.()
+            ElMessage({
+                message: '退出成功',
+                type: 'success'
+            })
+        }
+    })
+    console.log(router, 'router')
+    showPersonalInfo.value = false
     Cookies.remove('name');
     Cookies.remove('isLogin');
     Cookies.remove('avatar');
     Cookies.remove('sex');
     Cookies.remove('signature');
-    Cookies.remove('user_id'); 
+    Cookies.remove('user_id');
     isLogin.value = 0;
     emitter.emit('updateHeader')
 
@@ -191,17 +330,103 @@ function changeAvatar() {
     }
 }
 
-emitter.on('login', ({ status, name, avatar_ ,signature_,sex_}) => {
+function websocketMessage(e) {
+    console.log('收到消息', e.data)
+    let data = JSON.parse(e.data)
+    console.log(data)
+    if (data.type === 'call_start') {
+        let { type, ...user } = data;
+        Object.assign(userInfo, user);
+        console.log('呼叫对象信息', userInfo);
+        console.log(call_in.value, 'ssss')
+        if(videoViewRef.value.show||audioViewRef.value.show){
+            store.ws.send(JSON.stringify({
+                type:'call_refuse',
+                fromUserId:Cookies.get('user_id'),
+                toUserId:userInfo.fromUserId,
+                content:'对方正在通话中'
+            }))
+        }else{
+            call_in.value.showCallIn = true
+        }
+       
+    }
+    if (data.type === 'call_start_1') {
+
+    }
+    if (data.type === 'call_start_0') {
+        ElMessage.error(data.content);
+        emitter.emit('call_respones');
+    }
+    if (data.type === "call_accept") {
+        emitter.emit('call_respones');
+        emitter.emit('call_accept', data)
+    }
+    if (data.type === '1V1ICE') {
+        emitter.emit('1V1ICE', data)
+    }
+    if (data.type === '1V1OFFER') {
+        emitter.emit('1V1OFFER', data)
+    }
+    if (data.type === '1V1ANSWER') {
+        emitter.emit('1V1ANSWER', data)
+    }
+    if(data.type === 'call_refuse'){
+      emitter.emit('call_respones');
+      let notify = ElNotification({
+      title: '提示',
+      message: data.content,
+      type: 'error',
+      duration: 3000,
+      position:'bottom-right',
+    })
+    }
+    if(data.type === '1V1CLOSE'){
+        if(data.callType==='video'){
+            videoViewRef.value.closeLocalStream()
+            videoViewRef.value.show = false;
+        }
+        if(data.callType==='audio'){
+            audioViewRef.value.closeLocalStream()
+            audioViewRef.value.show = false;
+        }
+        offerData = null;
+        answerData =null;
+        iceData =null;
+    let notify = ElNotification({
+      title: '提示',
+      message: data.content,
+      type: 'error',
+      duration: 3000,
+      position:'bottom-right',
+    })
+    }
+}
+
+emitter.on('ws_init',()=>{
+    store.ws.onmessage = websocketMessage
+})
+
+emitter.on('login', ({ status, name, avatar_, signature_, sex_ }) => {
     // console.log('login11111', data)
     console.log(status, name)
     isLogin.value = status;
-    username.value = _username.value= name;
-    avatarUrl.value = avatar.value =avatar_;
-    _signature.value =signature.value = signature_
-    sex.value=_sex.value = sex_
+    username.value = _username.value = name;
+    avatarUrl.value = avatar.value = avatar_;
+    _signature.value = signature.value = signature_
+    sex.value = _sex.value = sex_
 })
+onMounted(() => {
+    if (Cookies.get('isLogin') === '1') {
+        if (!(store.ws.send)) {
+            store.ws = initWs(Cookies.get('user_id'))
+            setTimeout(() => {
+                store.ws.onmessage = websocketMessage
+            }, 0);
+        }
 
-console.log(isLogin, '是否登录')
+    }
+})
 </script>
 <style lang="less" setup>
 .header-wrap {
