@@ -42,6 +42,13 @@ wss.on('connection',function(ws){  //在connection事件中，回调函数会传
                     fromUserId,
                     members:Object.keys(room[room_id])
                 }))
+                notify(room_id,JSON.stringify({
+                    type:'room_message',
+                    fromUserId,
+                    room_id,
+                    message_type:'system',
+                    message:`加入房间`
+                }))
             }
             if(type === 'room_leave'){
                 if(room_id in room){
@@ -51,6 +58,14 @@ wss.on('connection',function(ws){  //在connection事件中，回调函数会传
                         room_id,
                         fromUserId,
                         members:Object.keys(room[room_id])
+                    }))
+
+                    notify(room_id,JSON.stringify({
+                        type:'room_message',
+                        fromUserId,
+                        room_id,
+                        message_type:'system',
+                        message:`离开房间`
                     }))
                 }
             }

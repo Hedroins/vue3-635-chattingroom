@@ -120,10 +120,10 @@ function createMessageBox(user_id,message){
   messageBox.style.width = '90%'
   messageBox.style.display='flex';
   messageBox.style.flexDirection='row';
-  messageBox.style.justifyContent='space-between';
+  messageBox.style.justifyContent='flex-start';
   messageBox.style.alignItems='center';
-  messageBox.style.marginBottom='20px';
-  messageBox.style.marginTop='20px';
+  messageBox.style.marginBottom='10px';
+  messageBox.style.marginTop='10px';
   let avatarNameCon = document.createElement('div')
   avatarNameCon.style.display = 'flex'
   avatarNameCon.style.alignItems = 'center'
@@ -145,7 +145,7 @@ function createMessageBox(user_id,message){
   avatarNameCon.appendChild(avatar)
   avatarNameCon.appendChild(name)
   let messageCon = document.createElement('div')
-  messageCon.style.width = 'calc(100% - 90px)'
+  messageCon.style.maxWidth = 'calc(100% - 90px)'
 //   messageCon.style.height = '100%'
   messageCon.style.padding = '5px';
   messageCon.innerText= message;
@@ -154,9 +154,24 @@ function createMessageBox(user_id,message){
   messageCon.style.backgroundColor = '#F5F5F5';
   messageCon.style.wordBreak='break-all'
   messageCon.style.border= '3px double #000000'
+  messageCon.style.marginLeft = '10px'
   messageBox.appendChild(avatarNameCon)
   messageBox.appendChild(messageCon)
   return messageBox
+}
+
+function createSystemMessage(user_id,systemMes) {
+    let messageBox = document.createElement('div');
+    let message = document.createElement('span');
+    message.innerText = memberInfoMap[user_id].username+systemMes;
+    message.style.fontSize = '14px';
+    message.style.textAlign = 'left';
+    message.style.color = '#ddd';
+    messageBox.style.textAlign='center';
+    messageBox.style.marginTop = '10px';
+    messageBox.style.marginBottom = '10px';
+    messageBox.appendChild(message);
+    return messageBox
 }
 function moutedView() {
     // let prePageView = []
@@ -338,6 +353,7 @@ onBeforeMount(() => {
             peerMap[data.fromUserId].close();
            
             delete peerMap[data.fromUserId];
+            activeView(currentPage.value)
     })
     emitter.on('room_offer', (data) => {
         peerMap[data.fromUserId].setRemoteDescription(data.sdp);
@@ -366,7 +382,12 @@ onBeforeMount(() => {
     })
     emitter.on('room_message',data=>{
         let messageBox = document.getElementById('message-box');
-       messageBox.appendChild(createMessageBox(data.fromUserId,data.message));
+        if(data.message_type==='system'){
+         messageBox.appendChild(createSystemMessage(data.fromUserId,data.message));
+        }else{
+         messageBox.appendChild(createMessageBox(data.fromUserId,data.message));
+        }
+      
        messageBox.scrollTo(0,messageBox.scrollHeight)
     })
 })
@@ -393,7 +414,7 @@ onBeforeUnmount(() => {
     store.ws.send(JSON.stringify({
         type: 'room_leave',
         room_id: room,
-        fromUserId: Cookies.get('user_id')
+        fromUserId: user_id
     }))
     localStream?.getTracks?.()?.forEach?.(track=>track.stop())
     for(let key in peerMap){
