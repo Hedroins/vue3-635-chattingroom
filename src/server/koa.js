@@ -13,6 +13,7 @@ app.use(body.koaBody({multipart: true,
 app.use(router.routes())
 app.use(router.allowedMethods())
 app.use(static(__dirname + '../../public/avatar'))
+app.use(static(__dirname + '../../public/bg'))
 
 
 // app.use(async (ctx,next)=>{

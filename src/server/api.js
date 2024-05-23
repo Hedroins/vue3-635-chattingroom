@@ -5,6 +5,7 @@ const db_url = require('./database')
 const md5 = require('md5')
 const fs = require('node:fs')
 const path = require('node:path')
+const {saveBase64AsFile} = require('./tools')
 
 let db =null;
 
@@ -32,7 +33,15 @@ let userShema = new mongoose.Schema({
     friends_id: [String]
 })
 
+let roomShema = new mongoose.Schema({
+    room_id: String,
+    room_name: String,
+    room_avatar: String,
+    room_members: [String],
+})
+
 const User = mongoose.model("user", userShema)
+const Room = mongoose.model("room", roomShema)
 
 
 router.post('/api/searchFriends', (ctx, next) => {
@@ -127,6 +136,12 @@ router.get('/(.*).png', (ctx, next) => {
 
 })
 
+router.get('/(.*).mp3', (ctx, next) => {
+    ctx.res.setHeader('Content-Type', 'audio/mpeg')
+    ctx.body = fs.createReadStream(path.resolve(__dirname, '../../public/bg/' + ctx.params[0] + '.mp3'))
+
+})
+
 router.post('/api/registry', (ctx, next) => {
     const user = new User({
         user_id: ctx.request.body.user_id,
@@ -190,14 +205,14 @@ router.post('/api/login', (ctx, next) => {
             ctx.res.setHeader('Content-Type', 'application/json');
             ctx.res.write(JSON.stringify({ name: 'error' }));
         } else {
-            ctx.res.statusCode = 302;
+            ctx.res.statusCode = 200;
             ctx.res.setHeader('Content-Type', 'application/json');
-            ctx.cookies.set('isLogin', '1', { maxAge: 8000000 ,httpOnly: false});
-            ctx.cookies.set('sex', result.sex,{ maxAge: 8000000,httpOnly: false});
-            ctx.cookies.set('name',   Buffer.from(result.username,'utf-8').toString('base64'), { maxAge: 8000000,httpOnly:false});
-            ctx.cookies.set('user_id', result.user_id, { maxAge: 8000000,httpOnly:false});
-            ctx.cookies.set('avatar', result.avatar, { maxAge: 8000000,httpOnly:false});
-            ctx.cookies.set('signature', Buffer.from(result.signature,'utf-8').toString('base64'), { maxAge: 8000000,httpOnly:false});
+            ctx.cookies.set('isLogin', '1', { expires:new Date(Date.now()+30*24*60*60*1000) ,httpOnly: false});
+            ctx.cookies.set('sex', result.sex,{ expires:new Date(Date.now()+30*24*60*60*1000),httpOnly: false});
+            ctx.cookies.set('name',   Buffer.from(result.username,'utf-8').toString('base64'), { expires:new Date(Date.now()+30*24*60*60*1000),httpOnly:false});
+            ctx.cookies.set('user_id', result.user_id, { expires:new Date(Date.now()+30*24*60*60*1000),httpOnly:false});
+            ctx.cookies.set('avatar', result.avatar, { expires:new Date(Date.now()+30*24*60*60*1000),httpOnly:false});
+            ctx.cookies.set('signature', Buffer.from(result.signature,'utf-8').toString('base64'), {expires:new Date(Date.now()+30*24*60*60*1000),httpOnly:false});
             ctx.res.write(JSON.stringify(result));
 
         }
@@ -225,32 +240,15 @@ router.post('/api/logout', (ctx, next) => {
 
 router.post('/api/updateUserInfo', (ctx, next) => {
     let bodyObj = JSON.parse(ctx.request.body) 
-    let expire = bodyObj.expires-Math.floor(Date.now()/1000);
+    let expire = new Date(+bodyObj.expires);
        return new Promise((resolve, reject) => { 
           console.log('user_id:',bodyObj.user_id)
             User.findOneAndUpdate({ user_id: bodyObj.user_id },{$set:(function(body){
                 let obj = {}
                 for(let key in body){
                  if(key == 'avatar'){
-                     let base64Data = Buffer.from(body[key].replace(/^data:image\/\w+;base64,/, ""),'base64');
-                     fs.unlink(path.resolve(__dirname, '../../public/avatar/' +bodyObj.user_id + '.png'), function (err) {
-                         if (err) {
-                             console.log('删除错误！',err)
-                         }else{
-                            console.log('删除成功')
-                   
-                         }
-                         fs.writeFile(path.resolve(__dirname, '../../public/avatar/' +bodyObj.user_id + '.png'), base64Data, function (err,data) {
-                            if (err) {
-                                console.log(err)
-                                reject(err)
-                            }else{
-                                console.log('写入成功')
-                            }
-                        });
-                     })
-             
-                     obj[key] = bodyObj.user_id + '.png'
+                    saveBase64AsFile(bodyObj.avatar,bodyObj.user_id,reject)
+                 obj[key] = bodyObj.user_id + '.png'
                 
                  }else{
                     obj[key] = body[key]
@@ -277,11 +275,11 @@ router.post('/api/updateUserInfo', (ctx, next) => {
         console.log(bodyObj.username,'bodyObj')
         console.log(result,'result')
         ctx.res.setHeader('Content-Type', 'application/json');
-        ctx.cookies.set('sex', bodyObj.sex||result.sex,{maxAge:expire,httpOnly:false});
-        ctx.cookies.set('name',Buffer.from(bodyObj.username||result.username,'utf-8').toString('base64'),{maxAge:expire,httpOnly:false});
-        ctx.cookies.set('user_id', result.user_id,{maxAge:expire,httpOnly:false});
-        ctx.cookies.set('avatar', result.avatar,{maxAge:expire,httpOnly:false});
-        ctx.cookies.set('signature',Buffer.from(bodyObj.signature||result.signature,'utf-8').toString('base64'),{maxAge:expire,httpOnly:false});
+        ctx.cookies.set('sex', bodyObj.sex||result.sex,{expires:expire,httpOnly:false});
+        ctx.cookies.set('name',Buffer.from(bodyObj.username||result.username,'utf-8').toString('base64'),{expires:expire,httpOnly:false});
+        ctx.cookies.set('user_id', result.user_id,{expires:expire,httpOnly:false});
+        ctx.cookies.set('avatar', result.avatar,{expires:expire,httpOnly:false});
+        ctx.cookies.set('signature',Buffer.from(bodyObj.signature||result.signature,'utf-8').toString('base64'),{expires:expire,httpOnly:false});
         ctx.res.write(JSON.stringify({sex:bodyObj.sex||result.sex,username: bodyObj.username||result.username,user_id: result.user_id,avatar: result.avatar,signature: bodyObj.signature||result.signature}));
         ctx.res.end();
     }).catch(err => {
@@ -292,6 +290,107 @@ router.post('/api/updateUserInfo', (ctx, next) => {
     })
 })
 
+router.post('/api/createRoom',(ctx,next)=>{
+    let bodyObj = ctx.request.body;
+    console.log(bodyObj,'bodyObj')
+    const room = new Room({
+        room_id: bodyObj.id,
+        room_name: bodyObj.name,
+        room_avatar: bodyObj.avatar==='default-room-pic.png'?'default-room-pic.png':bodyObj.id+'.png',
+        room_members:bodyObj.memberList,
+
+    })
+   if(!(bodyObj.avatar==='default-room-pic.png')){
+    saveBase64AsFile(bodyObj.avatar,bodyObj.id)
+   }
+   
+    room.save().then(() => {
+        console.log('执行成功！')
+    })
+    ctx.res.statusCode = 200;
+    ctx.res.setHeader('Content-Type', 'application/json');
+    ctx.res.write(JSON.stringify({ name: 'ok' }));
+    ctx.res.end();
+})
+
+router.post('/api/getRoomList',(ctx,next)=>{
+    let bodyObj = JSON.parse(ctx.request.body);
+    console.log(bodyObj,'bodyObj')
+    let roomInfo =[]
+    return new Promise((resolve,reject)=>{
+        new Promise((resolve_,reject_)=>{
+            Room.find({room_members:{$elemMatch:{$eq:bodyObj.user_id}}}).then(result => {
+                if(result instanceof Array){
+                    result = [...result]
+                }else{
+                    result = [result]
+                }
+               
+               resolve_(result)
+            })
+        }).then(result=>{
+            if(result.length!==0){
+                let promise_Set = []
+                result.forEach((item,index) => {
+                 promise_Set.push(
+                    new Promise((resolve_1,reject_1)=>{
+                        User.find({$and:[{user_id:{$in:item.room_members}},{isLogin:1}]}).then(result2 => {
+                   
+                            if(result2 instanceof Array){
+                                result2 = [...result2]
+                            }else{
+                                result2 = [result2]
+                            }
+                            // item['online_members'] = result2.length
+                            // console.log('item-----------------',item)
+                            resolve_1({room:item,online:result2?.length?result2?.length:0})
+                          })
+                        
+                    })
+                 ) 
+                })
+                return Promise.all(promise_Set)
+            }else{
+                resolve([])
+            }
+        }).then(result_ => {
+           resolve(result_)
+        })
+      
+    }).then(roomInfo => {
+        ctx.res.statusCode = 200;
+        ctx.res.setHeader('Content-Type', 'application/json');
+        ctx.res.write(JSON.stringify(roomInfo));
+        ctx.res.end();
+    })
+   
+})
+
+router.post('/api/getMemberList',(ctx,next)=>{
+    let bodyObj = JSON.parse(ctx.request.body);
+    return new Promise((resolve,reject)=>{
+        Room.find({room_id:{$eq:bodyObj.room_id}}).then(result => {
+            if(result instanceof Array){
+                result = [...result]
+            }else{
+                result = [result]
+            }
+            if(result?.[0]?.room_members?.length>0){
+                User.find({$or:[{user_id:{$in:result[0].room_members}}]}).then(result => {
+                    resolve(result)
+                })
+            }else{
+                resolve([])
+            }
+        })
+    }).then(result => {
+        ctx.res.statusCode = 200;
+        ctx.res.setHeader('Content-Type', 'application/json');
+        ctx.res.write(JSON.stringify(result));
+        ctx.res.end();
+    })
+
+})
 
 router.post('/api', (ctx, next) => {
     ctx.res.statusCode = 200;

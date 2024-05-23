@@ -38,9 +38,7 @@
                         <el-button type="danger" @click="userLogout">退出登录</el-button>
                     </div>
                 </div>
-                <el-divider direction="vertical" style="height: 100%;">
-                    <el-icon><star-filled /></el-icon>
-                </el-divider>
+            
                 <div class="right-content">
                     <label>用户名:</label>
                     <el-input v-model="_username" style="width: 240px" placeholder="请输入用户名" @input="usernameChange" />
@@ -206,6 +204,12 @@ emitter.on('audio_peer_closed',()=>{
         iceData =null;
 })
 
+emitter.on('video_peer_closed',()=>{
+    offerData = null;
+        answerData =null;
+        iceData =null;
+})
+
 emitter.on('1V1ICE', data => {
     iceData = data
    if(data.callType === 'video'){
@@ -348,6 +352,7 @@ function websocketMessage(e) {
             }))
         }else{
             call_in.value.showCallIn = true
+            call_in.value.playAudio()
         }
        
     }
@@ -400,6 +405,25 @@ function websocketMessage(e) {
       duration: 3000,
       position:'bottom-right',
     })
+    }
+    
+    if(data.type === 'room_join'){
+        emitter.emit('room_join', data)
+    }
+    if(data.type === 'room_leave'){
+        emitter.emit('room_leave', data)
+    }
+    if(data.type === 'room_offer'){
+        emitter.emit('room_offer', data)
+    }
+    if(data.type === 'room_answer'){
+        emitter.emit('room_answer', data)
+    }
+    if(data.type === 'room_ice'){
+        emitter.emit('room_ice', data)
+    }
+    if(data.type === 'room_message'){
+        emitter.emit('room_message', data)
     }
 }
 
@@ -481,6 +505,7 @@ onMounted(() => {
 
                 .avatar {
                     width: 100%;
+                    height: 100%;
                     border-radius: 50%;
                 }
 

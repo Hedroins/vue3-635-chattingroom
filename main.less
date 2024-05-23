@@ -116,3 +116,23 @@ html,body {
     background: -o-linear-gradient(right, #e7daca, #ffc987); /* Opera 11.1 - 12.0 */
     background: -moz-linear-gradient(right, #e7daca, #ffc987); /* Firefox 3.6 - 15 */
     background: linear-gradient(to right, #e7daca, #ffc987); /* 标准的语法（必须放在最后） */} 
+
+    /* 对于Webkit浏览器 */
+ 
+::-webkit-scrollbar-track {
+    background: #f1f1f1; /* 滚动条轨道颜色 */
+}
+ 
+::-webkit-scrollbar-thumb {
+    background: green; /* 滚动条手柄颜色 */
+}
+ 
+::-webkit-scrollbar-thumb:hover {
+    background: rgb(104, 206, 104); /* 滚动条手柄在悬停时的颜色 */
+}
+
+* {
+    -ms-scrollbar-face-color: green; /* 滚动条手柄颜色 */
+    -ms-scrollbar-track-color: #f1f1f1; /* 滚动条轨道颜色 */
+    scrollbar-color:  green #f1f1f1; /* 设置滚动条手柄和轨道颜色 */
+}

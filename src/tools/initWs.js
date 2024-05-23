@@ -1,14 +1,17 @@
 
 import Cookies from 'js-cookie'
 import { base64ToStr } from '@/tools/tool'
+import emmiter from '@/mitt/mitt'
 let peer = {}
 export function initWs(userId){
     if('WebSocket' in window){
         console.log('websocket')
         let ws = new WebSocket("wss://47.120.71.102/wss");
         ws.onopen = function () {
+          emmiter.emit('ws_init')
           console.log('websocket open');
           ws.send(JSON.stringify({
+            type:'login',
             fromUserId: userId,
           }))
         }
@@ -20,7 +23,7 @@ export function initWs(userId){
         }
         return ws;
       }else{
-        console.log('websocket not support')
+        alert('websocket not support')
       }
 }
 

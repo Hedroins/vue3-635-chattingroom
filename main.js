@@ -22,11 +22,13 @@ app.mount('#app')
 let timer = setInterval(() => {
     import("@/store/user.js").then(res => {
       let user_id = Cookies.get("user_id");
-      if(!user_id&&localStorage.getItem('user_id')){
+      console.log("user_id",user_id);
+      if((!user_id)&&localStorage.getItem('user_id')){
         fetch(`/api/resetUserState`,{method:"POST",body:JSON.stringify({user_id:localStorage.getItem('user_id')})}).then(res =>res.json()).then(data => {
           console.log("用户状态",data);
             if(data.status==1){
                 console.log("用户成功退出");
+                clearInterval(timer);
             }
           })
       }

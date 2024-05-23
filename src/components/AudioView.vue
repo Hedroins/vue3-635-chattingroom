@@ -1,5 +1,5 @@
 <template>
-  <div v-show="show" class="audio-view audio-border" draggable="true">
+  <div v-show="show" class="audio-view audio-border" draggable="true" @dragstart="dragstart" @dragend="dragend">
     <audio id="localAudio" autoplay muted controls style="display: none;"></audio>
     <audio id="remoteAudio" autoplay controls style="display: none;"></audio>
     <div class="audio-view-left">
@@ -7,18 +7,18 @@
         <div style="width:60px;height:60px;border-radius: 50%;overflow: hidden" >
                     <img :src="callingData.avatar" width="100%" height="100%" alt="用户头像" >
                 </div>
-                <div style="text-align: center;">
+               
+      </div>
+      <div style="text-align: center;">
                     <span style="font-size: 20px;">{{ callingData.fromUser }}</span>
                 </div>
-      </div>
-      
     </div>
     <div class="audio-view-right">
         <div class="callingTimer" style="text-align: center;">
          {{ timerStr }}
         </div>
         <div class="callingButtons">
-            <el-button type="danger">禁用</el-button>
+            <el-button type="danger" @click="disAbleAudio">禁用</el-button>
             <el-button type="danger" @click="closeLocalStream(true)"> 挂断</el-button>
         </div>
     </div>
@@ -32,6 +32,7 @@ import emitter from '@/mitt/mitt'
 import { useWebSocketStore } from '@/store/websocket';
 import Cookies from 'js-cookie'
 import {formatTime} from '@/tools/tool'
+import {ElNotification} from 'element-plus'
 let show =ref(false)
 let props = defineProps(['toUser'])
 let store = useWebSocketStore()
@@ -40,6 +41,7 @@ let callingData = reactive({})
 let callBackCode = ref('')
 let timerStr = ref('00:00:00')
 let timer = 0
+let audioState = ref(true)
 defineExpose({
     show,
     peerStatus,
@@ -48,6 +50,45 @@ defineExpose({
 let localStream;
 let remoteStream;
 let peer;
+
+
+// function dragElement(element) {
+//   element.addEventListener('mousedown', onMouseDown);
+// }
+
+// function onMouseDown(event) {
+//   event.preventDefault();
+
+//   const mouseDownX = event.clientX;
+//   const mouseDownY = event.clientY;
+//   const element = document.querySelector('.audio-view');
+//   element.addEventListener('mousemove', onMouseMove);
+//   element.addEventListener('mouseup', onMouseUp);
+
+//   function onMouseMove(event) {
+//     event.preventDefault();
+
+//     const mouseMoveX = event.clientX;
+//     const mouseMoveY = event.clientY;
+
+//     const deltaX = mouseMoveX - mouseDownX;
+//     const deltaY = mouseMoveY - mouseDownY;
+
+//     element.style.left = `${element.offsetLeft + deltaX}px`;
+//     element.style.top = `${element.offsetTop + deltaY}px`;
+//   }
+
+//   function onMouseUp(event) {
+//     event.preventDefault();
+//     element.removeEventListener('mousemove', onMouseMove);
+//     element.removeEventListener('mouseup', onMouseUp);
+//   }
+// }
+
+// 使用示例：
+
+
+
 function closeLocalStream(close){
     const localAudio = document.getElementById('localAudio');
     localStream?.getTracks?.()?.forEach?.(track=>track.stop())
@@ -75,6 +116,10 @@ function closeLocalStream(close){
     show.value = false;
     clearInterval(callBackCode.value)
     timer= 0
+}
+
+function disAbleAudio(){
+    localStream.getTracks().forEach(track=>{if(track.enabled){track.enabled=false;audioState.value = false}else{track.enabled=true;audioState.value = true}})
 }
 
  function createLocalStream(data,isCallSide=true){
@@ -138,6 +183,35 @@ peerA.onaddstream=(event)=>{
     const remoteAudio = document.getElementById('remoteAudio');
     remoteAudio.srcObject = remoteStream;
         }
+
+peerA.onconnectionstatechange = (event)=>{
+   if(event.target.connectionState=='disconnected'){
+    if(peer){
+      console.log('curentPeer',peer)
+        peer.close()
+        peerStatus.value =0
+        peer = null
+        emitter.emit('audio_peer_closed')
+    }
+    localAudio.srcObject =null;
+    show.value = false;
+    clearInterval(callBackCode.value)
+    timer= 0
+    let notify = ElNotification({
+      title: '提示',
+      message: '已断开链接',
+      type: 'error',
+      duration: 3000,
+      position:'bottom-right',
+    })
+    }
+   }
+
+
+peerA.oniceconnectionstatechange = (event)=>{
+    console.log('oniceconnectionstatechange',event)
+}
+
 if(isCallSide){
     peerA.createOffer({
     offerToReceiveAudio: 1}).then(offer=>{
@@ -158,8 +232,8 @@ if(isCallSide){
     return peerA;
 // 创建 SDP 描述
 
-
 }
+
 
 onMounted(()=>{
   emitter.on('audio_ready',({data,isCallSide})=>{

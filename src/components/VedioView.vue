@@ -14,6 +14,7 @@ import {initWs,closeWs} from "@/tools/initWs"
 import emitter from '@/mitt/mitt'
 import { useWebSocketStore } from '@/store/websocket';
 import Cookies from 'js-cookie'
+import {ElNotification} from 'element-plus'
 let show =ref(false)
 let props = defineProps(['toUser'])
 let store = useWebSocketStore()
@@ -49,7 +50,10 @@ function closeLocalStream(close){
         peerStatus.value =0
         peer = null
     }
-    localVideo.srcObject =null;
+    if(localVideo&&localVideo.srcObject){
+        localVideo.srcObject =null;
+    }
+   
 }
 
  function createLocalStream(data,isCallSide=true){
@@ -108,6 +112,8 @@ peerA.onaddstream=(event)=>{
     const remoteVideo = document.getElementById('remoteVideo');
     remoteVideo.srcObject = remoteStream;
         }
+
+
 if(isCallSide){
     peerA.createOffer({
     offerToReceiveAudio: 1,

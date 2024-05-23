@@ -1,7 +1,7 @@
 <template>
-    <el-dialog v-model="showCallIn" title="来电显示" width="500" height="550" class="personal-info-dialog" @opened="()=>{}">
+    <el-dialog v-model="showCallIn" title="来电显示" width="500" height="550" class="personal-info-dialog" @opened="()=>{}" :show-close="false">
             <template #header>
-                <span>{{ userInfo.fromUser }}来电</span>
+                <span>{{ userInfo.fromUser }}{{ userInfo.callType === 'video' ? '邀请你视频通话' : '邀请你语音通话'}}</span>
             </template>
             <div class="call-in">
                 <div style="width:100px;height:100px;border-radius: 50%;overflow: hidden;margin: 0 auto;">
@@ -23,11 +23,13 @@
                     </el-button>
                 </div>
             </template> -->
+            <audio src="bg-music.mp3" autoplay="autoplay" loop="loop" id="bg-music" style="width: 0px;height: 0px;"></audio>
         </el-dialog>
+       
 </template>
 
 <script setup>
-import { ref, reactive} from 'vue'
+import { ref, reactive, onMounted, nextTick} from 'vue'
 import {useWebSocketStore} from '@/store/websocket' 
 import Cookies from 'js-cookie'   
 import {base64ToStr} from '@/tools/tool'
@@ -36,8 +38,21 @@ let showCallIn = ref(false)
 let store = useWebSocketStore()
 let props = defineProps(['userInfo'])
 defineExpose({
-    showCallIn
+    showCallIn,
+    playAudio
 })
+function playAudio(){
+    nextTick(()=>{
+        let audio = document.getElementById('bg-music')
+        let event = document.createEvent('MouseEvents');
+        event.initMouseEvent('click', true, true);
+        audio.dispatchEvent(event);
+        audio.onclick = ()=>{
+                audio.play()
+        }
+    })
+}
+
 function joinInCall() {
     let isCallSide = false
     console.log('data',props.userInfo.callType)
@@ -57,9 +72,15 @@ function joinInCall() {
         callType:props.userInfo.callType
     }))
     showCallIn.value = false;
+    let audio = document.getElementById('bg-music')
+    audio.pause();
+    audio.currentTime = 0;
 }
 
 function hangup(){
+    let audio = document.getElementById('bg-music')
+    audio.pause()
+    audio.currentTime = 0;
     store.ws.send(JSON.stringify({
         type: "call_refuse",
         fromUserId:Cookies.get('user_id'),

@@ -3,6 +3,7 @@
         <div class="func-box">
             <FuncBox :img="createRoom" text="创建房间" @click="creatRooms"></FuncBox>
             <FuncBox :img="addFriends" text="添加好友" @click="showFriendSearch = true"></FuncBox>
+            <CreateRooms ref="createRoomsRef"></CreateRooms>
         </div>
         <el-dialog v-model="showFriendSearch" title="添加好友" width="700" center class="search-friend-dialog">
             <template #header>
@@ -41,10 +42,12 @@ import FriendBox from '@/components/FriendBox.vue'
 import { Search } from '@element-plus/icons-vue'
 import Cookies from 'js-cookie'
 import { ElMessage } from 'element-plus'
+import CreateRooms from '@/components/CreateRooms.vue'
 
 let showFriendSearch = ref(false);
 let currentFriends = reactive([])
 let searchContent = ref('')
+let createRoomsRef = ref()
 
 function searchFriends() {
     fetch('/api/searchFriends', { method: 'POST', body: JSON.stringify({ searchContent: searchContent.value,user_id:Cookies.get("user_id")}) }).then(res => res.json()).then(data => {
@@ -53,11 +56,12 @@ function searchFriends() {
         currentFriends.push(...data)
     })
 }
-
+console.log(1111)
 function creatRooms() {
-    fetch('http://localhost:5027/api', { method: 'POST' }).then(res => res.json()).then(data => {
-        console.log('get data', data)
-    })
+    createRoomsRef.value.showCreateRoom = true
+    // fetch('http://localhost:5027/api/creatRoom', { method: 'POST' }).then(res => res.json()).then(data => {
+    //     console.log('get data', data)
+    // })
 }
 
 function addFriend(id) {
@@ -82,6 +86,7 @@ function addFriend(id) {
       }
     })
 }
+console.log('111')
 </script>
 <style lang='less' scoped>
 .main-wrap {

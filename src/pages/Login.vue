@@ -46,10 +46,10 @@ function onSubmit(formEl){
               if(res.username){
                 ElMessage.success('登录成功')
                 store.ws = initWs(res.user_id)
-                setTimeout(()=>{
-                  emitter.emit('ws_init')
-                },0)
-                localStorage.setItem('expires',Math.floor(Date.now()/1000)+10000000)
+                // setTimeout(()=>{
+                //   emitter.emit('ws_init')
+                // },0)
+                localStorage.setItem('expires',Math.floor(Date.now())+30*24*60*60*1000)
                 localStorage.setItem('user_id',res.user_id)
                 emitter.emit('login',{status:1,name:res.username,avatar_:res.avatar,signature_:res.signature,sex_:res.sex})
                 router.push({name:'main'})

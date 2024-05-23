@@ -6,6 +6,7 @@ import Login from '@/pages/Login.vue'
 import Register from '@/pages/Register.vue'
 import Root from '@/pages/Root.vue'
 import Content from '@/pages/Content.vue'
+import roomChatting from '@/pages/roomChatting.vue'
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 let routeConfig = [{
     path:'/',
@@ -42,6 +43,11 @@ let routeConfig = [{
                 name:'more'
             }]
         },
+        {
+            path:'roomChatting/:id',
+            component:roomChatting,
+            name:'roomChatting'
+        }
     ]
 }]
 
