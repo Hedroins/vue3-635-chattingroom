@@ -5,7 +5,7 @@
                 <div class="avatar-box" ><img :src="avatarUrl" alt=""></div>
                 <div class="username">{{ username }}</div>
                 <img :src="sex === '1' ? 'male.png' : 'female.png'"
-                    style="width:20px;margin-left: 5px;vertical-align: 1em;">
+                    style="width:20px;margin-left: 5px;height: 20px;align-self: center;">
                 <slot name="dot"></slot>
                 <slot name="middle" class="text-style"></slot>
             </div>
@@ -41,16 +41,22 @@ div[name="FriendBox"] {
     margin: auto auto auto 50px;
 
     .user-box {
-        display: inline-block;
+        display: inline-flex;
+        flex-flow: row nowrap;
+        justify-content: flex-start;
+        align-items: center;
         width: calc(80% - 45px);
         .username {
             line-height: 50px;
-            display: inline-block;
-            vertical-align: top;
+            flex:0 1 auto;
             margin-left: 10px;
             height: 50px;
             font-size: 20px;
-            color: #000000
+            color: #000000;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+
         }
     }
 }
@@ -66,6 +72,7 @@ div[name="FriendBox"]:hover {
     border-radius: 50%;
     overflow: hidden;
     position: relative;
+    flex:0 0 50px;
     img {
         width: 50px;
     }

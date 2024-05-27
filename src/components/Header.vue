@@ -425,6 +425,12 @@ function websocketMessage(e) {
     if(data.type === 'room_message'){
         emitter.emit('room_message', data)
     }
+    if(data.type === 'room_screen'){
+        emitter.emit('room_screen',data)
+    }
+    if(data.type === 'room_screen_off'){
+        emitter.emit('room_screen_off',data)
+    }
 }
 
 emitter.on('ws_init',()=>{

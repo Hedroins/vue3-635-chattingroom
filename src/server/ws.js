@@ -24,7 +24,7 @@ wss.on('connection',function(ws){  //在connection事件中，回调函数会传
         console.log(`[SERVER] Received:${message}`);
         
         let data = JSON.parse(message);     
-        let {type,fromUserId,fromUser,toUserId,room_id} = data;
+        let {type,fromUserId,fromUser,toUserId,room_id,screen} = data;
         scokertS[data.fromUserId] = ws;
         if(type==='login'){
           console.log(`[SERVER] login:${fromUserId}`);
@@ -76,7 +76,8 @@ wss.on('connection',function(ws){  //在connection事件中，回调函数会传
                     fromUserId,
                     offer:data.offer,
                     toUserId,
-                    sdp:data.sdp
+                    sdp:data.sdp,
+                    screen
                 }))
             }
             if(type === 'room_answer'){
@@ -86,7 +87,8 @@ wss.on('connection',function(ws){  //在connection事件中，回调函数会传
                     fromUserId,
                     answer:data.answer,
                     toUserId,
-                    sdp:data.sdp
+                    sdp:data.sdp,
+                    screen
                 }))
             }
             if(type === 'room_ice'){
@@ -95,7 +97,8 @@ wss.on('connection',function(ws){  //在connection事件中，回调函数会传
                     room_id,
                     fromUserId,
                     toUserId,
-                    sdp:data.sdp
+                    sdp:data.sdp,
+                    screen
                 }))
             }
             if(type === 'room_message'){
@@ -106,6 +109,44 @@ wss.on('connection',function(ws){  //在connection事件中，回调函数会传
                     message:data.message
                 }))
             }
+            if(type ==='room_screen'){
+                if(toUserId){
+                   room[room_id][toUserId].send(JSON.stringify({
+                        type:'room_screen',
+                        room_id,
+                        fromUserId,
+                        screen
+                   }))
+                }else{
+                    notify(room_id,JSON.stringify({
+                        type:'room_screen',
+                        room_id,
+                        fromUserId
+                    }))
+                    notify(room_id,JSON.stringify({
+                        type:'room_message',
+                        room_id,
+                        fromUserId,
+                        message:'开启了共享屏幕',
+                        message_type:'system'
+                    }))
+                }
+            }
+
+        if(type === 'room_screen_off'){
+            notify(room_id,JSON.stringify({
+                type:'room_screen_off',
+                room_id,
+                fromUserId
+            }))
+            notify(room_id,JSON.stringify({
+                type:'room_message',
+                room_id,
+                fromUserId,
+                message:'关闭了共享屏幕',
+                message_type:'system'
+            }))
+        }
         }else{
            
             if(type === 'call_start'){

@@ -8,8 +8,8 @@
         <template #footer>
           <div class="scrollFooter" v-if="index === users_copy.length - 1"></div>
         </template>
-        <template #middle><span class="text-style">{{ item.signature }}</span></template>
-        <template #dot><span class="status-dot" :style="{color: item.isLogin == 1 ? 'rgb(40,227,36)' : 'rgb(223,35,35)'}">.</span></template>
+        <template #middle><span class="text-style"><span style="display: inline-block;vertical-align: middle;">{{ item.signature }}</span></span></template>
+        <template #dot><span class="status-dot" :style="{color: item.isLogin == 1 ? 'rgb(40,227,36)' : 'rgb(223,35,35)'}"><span>.</span></span></template>
         <template #tail>
           <div class="func-container"
             style="width:calc(20% - 25px);display:inline-flex;height:30px;justify-content: space-between;vertical-align: 0.5em;"
@@ -165,22 +165,18 @@ onMounted(() => {
     height: calc(100% - 70px);
 
     .text-style {
-      display: inline-block;
       font-size: 14px;
-      width: calc(70% - 70px);
+      height: 50px;
+      line-height: 50px;
+      flex:1 1 auto;
       margin-left: 10px;
-      vertical-align: 1em;
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
+      color:#909399
 
     }
 
-    span {
-      font-size: 20px;
-      color: #909399;
-      margin: auto auto;
-    }
 
     .status-dot {
       display: inline;
